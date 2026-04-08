@@ -1,5 +1,5 @@
 name: trust-calibration-openenv
-version: "1.0.2"
+version: "1.0.3"
 title: Trust Calibration OpenEnv
 description: >
   A reinforcement learning environment where an agent learns how to dynamically
@@ -11,32 +11,32 @@ entrypoint:
   app: app
 
 tasks:
-  - id: easy
+  - id: task_easy_stable
     title: Stable Low-Conflict Trust Calibration
-    description: Stable low-conflict signals with minimal ambiguity.
     difficulty: easy
+    description: Stable low-conflict signals with minimal ambiguity.
     grader:
-      endpoint: /grader?task=easy
+      endpoint: /grader?task=task_easy_stable
       score_range:
         min: 0.001
         max: 0.999
 
-  - id: medium
+  - id: task_medium_conflict
     title: Mixed Conflict Decision-Making
-    description: Mixed conflict with moderate uncertainty.
     difficulty: medium
+    description: Mixed conflict with moderate uncertainty.
     grader:
-      endpoint: /grader?task=medium
+      endpoint: /grader?task=task_medium_conflict
       score_range:
         min: 0.001
         max: 0.999
 
-  - id: hard
+  - id: task_hard_adversarial
     title: Adversarial Signal Suppression
-    description: Adversarial unreliable signals requiring suppression.
     difficulty: hard
+    description: Adversarial unreliable signals requiring suppression.
     grader:
-      endpoint: /grader?task=hard
+      endpoint: /grader?task=task_hard_adversarial
       score_range:
         min: 0.001
         max: 0.999
