@@ -1,5 +1,6 @@
 name: trust-calibration-openenv
-version: 1.0
+version: "1.0.1"
+title: Trust Calibration OpenEnv
 description: >
   A reinforcement learning environment where an agent learns how to dynamically
   trust, suppress, and combine multiple noisy and adversarial signals to make
@@ -9,36 +10,50 @@ entrypoint:
   module: api.server
   app: app
 
+metadata:
+  domain: trust-calibration
+  category: decision-intelligence
+  difficulty_progression: easy-medium-hard
+
 tasks:
   - id: task_easy_stable
     title: Stable Low-Conflict Trust Calibration
     difficulty: easy
-    description: Stable low-conflict signals with minimal ambiguity
+    enabled: true
+    description: Stable low-conflict signals with minimal ambiguity.
     grader:
       type: python
       module: envs.grader
       function: grade_easy
-      score_range: [0.001, 0.999]
+      score_range:
+        min: 0.001
+        max: 0.999
 
   - id: task_medium_conflict
     title: Mixed Conflict Decision-Making
     difficulty: medium
-    description: Mixed conflict with moderate uncertainty
+    enabled: true
+    description: Mixed conflict with moderate uncertainty.
     grader:
       type: python
       module: envs.grader
       function: grade_medium
-      score_range: [0.001, 0.999]
+      score_range:
+        min: 0.001
+        max: 0.999
 
   - id: task_hard_adversarial
     title: Adversarial Signal Suppression
     difficulty: hard
-    description: Adversarial unreliable signals requiring suppression
+    enabled: true
+    description: Adversarial unreliable signals requiring suppression.
     grader:
       type: python
       module: envs.grader
       function: grade_hard
-      score_range: [0.001, 0.999]
+      score_range:
+        min: 0.001
+        max: 0.999
 
 observation_space:
   type: vector
