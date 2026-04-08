@@ -41,34 +41,6 @@ def reset_metrics():
     }
 
 
-def normalize_task_name(task_name: Optional[str]) -> str:
-    if not task_name:
-        return CURRENT_TASK
-
-    task_name = str(task_name).strip().lower()
-
-    mapping = {
-        "easy": "easy",
-        "medium": "medium",
-        "hard": "hard",
-        "task_easy_stable": "easy",
-        "task_medium_conflict": "medium",
-        "task_hard_adversarial": "hard",
-    }
-
-    return mapping.get(task_name, "medium")
-
-
-def grade_for_task(task_name: str) -> float:
-    task_name = normalize_task_name(task_name)
-
-    if task_name == "easy":
-        return grade_easy(TASK_METRICS)
-    if task_name == "medium":
-        return grade_medium(TASK_METRICS)
-    return grade_hard(TASK_METRICS)
-
-
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(
@@ -83,13 +55,14 @@ def tasks():
 
 
 @app.get("/grader")
-def grader(
-    task: Optional[str] = Query(default=None),
-    task_id: Optional[str] = Query(default=None),
-    id: Optional[str] = Query(default=None),
-):
-    effective_task = normalize_task_name(task or task_id or id)
-    score = grade_for_task(effective_task)
+def grader(task: str = Query(...)):
+    if task == "easy":
+        score = grade_easy(TASK_METRICS)
+    elif task == "medium":
+        score = grade_medium(TASK_METRICS)
+    else:
+        score = grade_hard(TASK_METRICS)
+
     return {"score": score}
 
 
@@ -98,7 +71,10 @@ def reset(req: Optional[ResetRequest] = None) -> ResetResponse:
     global ENV, CURRENT_OBS, CURRENT_TASK
 
     req = req or ResetRequest()
-    difficulty = normalize_task_name(getattr(req, "difficulty", "medium"))
+    difficulty = getattr(req, "difficulty", "medium") or "medium"
+
+    if difficulty not in ["easy", "medium", "hard"]:
+        difficulty = "medium"
 
     CURRENT_TASK = difficulty
     reset_metrics()
@@ -140,15 +116,22 @@ def step(req: StepRequest) -> StepResponse:
     current_total = TASK_METRICS["total"]
 
     TASK_METRICS["avg_conflict"] = (
-        ((current_total - 1) * TASK_METRICS["avg_conflict"]) + float(info.get("conflict", 0.0))
+        ((current_total - 1) * TASK_METRICS["avg_conflict"])
+        + float(info.get("conflict", 0.0))
     ) / current_total
 
     TASK_METRICS["avg_uncertainty"] = (
-        ((current_total - 1) * TASK_METRICS["avg_uncertainty"]) + float(info.get("uncertainty", 0.0))
+        ((current_total - 1) * TASK_METRICS["avg_uncertainty"])
+        + float(info.get("uncertainty", 0.0))
     ) / current_total
 
     info["task"] = CURRENT_TASK
-    info["score"] = grade_for_task(CURRENT_TASK)
+    if CURRENT_TASK == "easy":
+        info["score"] = grade_easy(TASK_METRICS)
+    elif CURRENT_TASK == "medium":
+        info["score"] = grade_medium(TASK_METRICS)
+    else:
+        info["score"] = grade_hard(TASK_METRICS)
 
     return StepResponse(
         observation=[float(x) for x in obs.tolist()],
