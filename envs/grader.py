@@ -1,44 +1,43 @@
-def _safe_ratio(num: int, den: int) -> float:
-    return float(num) / float(max(den, 1))
-
-
-def _strict_unit_interval(value: float) -> float:
-    """
-    Force score strictly inside (0, 1), never exactly 0.0 or 1.0.
-    """
+def clamp_score(value: float) -> float:
+    value = round(float(value), 2)
     if value <= 0.0:
-        return 0.001
+        return 0.01
     if value >= 1.0:
-        return 0.999
-    return round(float(value), 3)
+        return 0.99
+    return value
 
 
-def _score_from_metrics(metrics: dict, missed_weight: float, false_weight: float) -> float:
-    correct = int(metrics.get("correct", 0))
-    total = int(metrics.get("total", 0))
-    missed_escalate = int(metrics.get("missed_escalate", 0))
-    false_escalate = int(metrics.get("false_escalate", 0))
+def compute_continuous_score(metrics: dict, task: str) -> float:
+    total = max(1, int(metrics.get("total", 0)))
+    correct = float(metrics.get("correct", 0)) / total
+    missed = float(metrics.get("missed_escalate", 0)) / total
+    false_escalate = float(metrics.get("false_escalate", 0)) / total
+    conflict = float(metrics.get("avg_conflict", 0.0))
+    uncertainty = float(metrics.get("avg_uncertainty", 0.0))
 
-    # Important: even before any steps, return a valid in-range score
-    if total <= 0:
-        return 0.500
+    score = (
+        0.70 * correct
+        + 0.15 * (1.0 - min(1.0, conflict))
+        + 0.15 * (1.0 - min(1.0, uncertainty))
+        - 0.20 * missed
+        - 0.10 * false_escalate
+    )
 
-    accuracy = _safe_ratio(correct, total)
-    missed_penalty = missed_weight * _safe_ratio(missed_escalate, total)
-    false_penalty = false_weight * _safe_ratio(false_escalate, total)
+    if task == "easy":
+        score += 0.03
+    elif task == "hard":
+        score -= 0.03
 
-    score = accuracy - missed_penalty - false_penalty
-    score = max(0.0, min(1.0, score))
-    return _strict_unit_interval(score)
+    return clamp_score(score)
 
 
 def grade_easy(metrics: dict) -> float:
-    return _score_from_metrics(metrics, missed_weight=0.10, false_weight=0.05)
+    return compute_continuous_score(metrics, "easy")
 
 
 def grade_medium(metrics: dict) -> float:
-    return _score_from_metrics(metrics, missed_weight=0.15, false_weight=0.08)
+    return compute_continuous_score(metrics, "medium")
 
 
 def grade_hard(metrics: dict) -> float:
-    return _score_from_metrics(metrics, missed_weight=0.35, false_weight=0.20)
+    return compute_continuous_score(metrics, "hard")
