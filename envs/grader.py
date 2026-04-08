@@ -1,4 +1,3 @@
-Envs/grader:
 def _safe_ratio(num: int, den: int) -> float:
     return float(num) / float(max(den, 1))
 
