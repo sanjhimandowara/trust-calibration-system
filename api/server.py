@@ -1,11 +1,11 @@
 from typing import Optional
 
 from fastapi import FastAPI, Query
-from fastapi.responses import HTMLResponse
 
 from envs.trust_env import TrustCalibrationEnv
 from models.schemas import (
     HealthResponse,
+    TaskInfo,
     ResetRequest,
     ResetResponse,
     StepRequest,
@@ -38,54 +38,31 @@ def _reset_metrics():
     }
 
 
-def _grade_current_task() -> float:
-    if CURRENT_TASK == "easy":
+def _normalize_task_name(task_name: Optional[str]) -> str:
+    if not task_name:
+        return CURRENT_TASK
+
+    task_name = str(task_name).strip().lower()
+
+    mapping = {
+        "easy": "easy",
+        "medium": "medium",
+        "hard": "hard",
+        "task_easy_stable": "easy",
+        "task_medium_conflict": "medium",
+        "task_hard_adversarial": "hard",
+    }
+
+    return mapping.get(task_name, "medium")
+
+
+def _grade_for_task(task_name: str) -> float:
+    task_name = _normalize_task_name(task_name)
+    if task_name == "easy":
         return grade_easy(TASK_METRICS)
-    if CURRENT_TASK == "medium":
+    if task_name == "medium":
         return grade_medium(TASK_METRICS)
     return grade_hard(TASK_METRICS)
-
-
-@app.get("/", response_class=HTMLResponse)
-def root():
-    return """
-    <html>
-        <head>
-            <title>Trust Calibration API</title>
-            <style>
-                body {
-                    background: #0b1220;
-                    color: #e6f1ff;
-                    font-family: Arial, sans-serif;
-                    padding: 40px;
-                }
-                h1 {
-                    color: #00d4ff;
-                    margin-bottom: 16px;
-                }
-                p {
-                    margin-bottom: 16px;
-                    color: #cfe4ff;
-                }
-                a {
-                    display: block;
-                    margin: 10px 0;
-                    color: #00d4ff;
-                    text-decoration: none;
-                    font-size: 18px;
-                }
-            </style>
-        </head>
-        <body>
-            <h1>Trust Calibration API Running</h1>
-            <p>Available endpoints:</p>
-            <a href="/health">/health</a>
-            <a href="/tasks">/tasks</a>
-            <a href="/grader">/grader</a>
-            <a href="/state">/state</a>
-        </body>
-    </html>
-    """
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -96,21 +73,47 @@ def health() -> HealthResponse:
     )
 
 
-@app.get("/tasks")
-def tasks():
-    return ["easy", "medium", "hard"]
+@app.get("/tasks", response_model=list[TaskInfo])
+def tasks() -> list[TaskInfo]:
+    return [
+        TaskInfo(
+            id="task_easy_stable",
+            title="Stable Low-Conflict Trust Calibration",
+            difficulty="easy",
+            description="Stable low-conflict signals with minimal ambiguity.",
+            grader_endpoint="/grader?task=task_easy_stable",
+            score_min=0.001,
+            score_max=0.999,
+        ),
+        TaskInfo(
+            id="task_medium_conflict",
+            title="Mixed Conflict Decision-Making",
+            difficulty="medium",
+            description="Mixed conflict with moderate uncertainty.",
+            grader_endpoint="/grader?task=task_medium_conflict",
+            score_min=0.001,
+            score_max=0.999,
+        ),
+        TaskInfo(
+            id="task_hard_adversarial",
+            title="Adversarial Signal Suppression",
+            difficulty="hard",
+            description="Adversarial unreliable signals requiring suppression.",
+            grader_endpoint="/grader?task=task_hard_adversarial",
+            score_min=0.001,
+            score_max=0.999,
+        ),
+    ]
 
 
 @app.get("/grader")
-def grader(task: Optional[str] = Query(default=None)):
-    effective_task = task or CURRENT_TASK
-
-    if effective_task == "easy":
-        score = grade_easy(TASK_METRICS)
-    elif effective_task == "medium":
-        score = grade_medium(TASK_METRICS)
-    else:
-        score = grade_hard(TASK_METRICS)
+def grader(
+    task: Optional[str] = Query(default=None),
+    task_id: Optional[str] = Query(default=None),
+    id: Optional[str] = Query(default=None),
+):
+    effective_task = _normalize_task_name(task or task_id or id)
+    score = _grade_for_task(effective_task)
 
     return {
         "task": effective_task,
@@ -124,10 +127,7 @@ def reset(req: Optional[ResetRequest] = None) -> ResetResponse:
     global ENV, CURRENT_OBS, CURRENT_TASK
 
     req = req or ResetRequest()
-    difficulty = getattr(req, "difficulty", "medium") or "medium"
-
-    if difficulty not in ["easy", "medium", "hard"]:
-        difficulty = "medium"
+    difficulty = _normalize_task_name(getattr(req, "difficulty", "medium"))
 
     CURRENT_TASK = difficulty
     _reset_metrics()
@@ -138,6 +138,9 @@ def reset(req: Optional[ResetRequest] = None) -> ResetResponse:
     )
 
     CURRENT_OBS, info = ENV.reset(seed=req.seed)
+
+    info["task"] = CURRENT_TASK
+    info["score"] = _grade_for_task(CURRENT_TASK)
 
     return ResetResponse(
         observation=[float(x) for x in CURRENT_OBS.tolist()],
@@ -167,7 +170,7 @@ def step(req: StepRequest) -> StepResponse:
         TASK_METRICS["false_escalate"] += 1
 
     info["task"] = CURRENT_TASK
-    info["score"] = _grade_current_task()
+    info["score"] = _grade_for_task(CURRENT_TASK)
 
     return StepResponse(
         observation=[float(x) for x in obs.tolist()],
