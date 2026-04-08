@@ -3,8 +3,6 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 from pydantic import BaseModel, Field
 
-# ---- CONSTANTS ----
-
 SOURCE_NAMES = [
     "anomaly_detector",
     "network_monitor",
@@ -18,7 +16,6 @@ N_SOURCES = 4
 N_ACTIONS = 6
 OBS_DIM = 22
 
-# ---- INTERNAL DATA STRUCTURES ----
 
 @dataclass
 class SignalBundle:
@@ -44,7 +41,6 @@ class DecisionOutput:
     ensemble_assessment: float
     agreement_score: float
 
-# ---- API / OPENENV-FRIENDLY PYDANTIC MODELS ----
 
 class HealthResponse(BaseModel):
     status: str
