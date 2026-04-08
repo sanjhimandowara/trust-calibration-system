@@ -2,9 +2,21 @@ def _safe_ratio(num: int, den: int) -> float:
     return float(num) / float(max(den, 1))
 
 
+def _strict_unit_interval(value: float) -> float:
+    """
+    Clamp score strictly inside (0, 1), never allowing 0.0 or 1.0.
+    """
+    value = round(float(value), 3)
+    if value <= 0.0:
+        return 0.001
+    if value >= 1.0:
+        return 0.999
+    return value
+
+
 def compute_score(metrics: dict) -> float:
     """
-    Deterministic normalized grader score in [0.0, 1.0].
+    Deterministic normalized grader score in (0.0, 1.0).
 
     metrics expected:
     - correct
@@ -23,7 +35,8 @@ def compute_score(metrics: dict) -> float:
     false_penalty = 0.08 * _safe_ratio(false_escalate, total)
 
     score = accuracy - missed_penalty - false_penalty
-    return round(max(0.0, min(1.0, score)), 3)
+    score = max(0.0, min(1.0, score))
+    return _strict_unit_interval(score)
 
 
 def grade_easy(metrics: dict) -> float:
@@ -41,20 +54,20 @@ def grade_easy(metrics: dict) -> float:
         - 0.10 * _safe_ratio(missed_escalate, total)
         - 0.05 * _safe_ratio(false_escalate, total)
     )
-    return round(max(0.0, min(1.0, score)), 3)
+    score = max(0.0, min(1.0, score))
+    return _strict_unit_interval(score)
 
 
 def grade_medium(metrics: dict) -> float:
     """
     Medium task: balanced penalties.
     """
-    return compute_score(metrics)
+    return _strict_unit_interval(compute_score(metrics))
 
 
 def grade_hard(metrics: dict) -> float:
     """
-    Hard task: much stricter penalties.
-    Missing critical escalations should hurt a lot more here.
+    Hard task: stricter penalties for adversarial conditions.
     """
     correct = int(metrics.get("correct", 0))
     total = int(metrics.get("total", 0))
@@ -69,4 +82,5 @@ def grade_hard(metrics: dict) -> float:
         - 0.20 * _safe_ratio(false_escalate, total)
     )
 
-    return round(max(0.0, min(1.0, score)), 3)
+    score = max(0.0, min(1.0, score))
+    return _strict_unit_interval(score)
