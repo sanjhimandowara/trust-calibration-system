@@ -3,14 +3,13 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 from pydantic import BaseModel, Field
 
-
 # ---- CONSTANTS ----
 
 SOURCE_NAMES = [
     "anomaly_detector",
     "network_monitor",
     "rule_engine",
-    "unreliable_feed"
+    "unreliable_feed",
 ]
 
 DECISIONS = ["IGNORE", "INVESTIGATE", "ESCALATE"]
@@ -18,7 +17,6 @@ DECISIONS = ["IGNORE", "INVESTIGATE", "ESCALATE"]
 N_SOURCES = 4
 N_ACTIONS = 6
 OBS_DIM = 22
-
 
 # ---- INTERNAL DATA STRUCTURES ----
 
@@ -46,7 +44,6 @@ class DecisionOutput:
     ensemble_assessment: float
     agreement_score: float
 
-
 # ---- API / OPENENV-FRIENDLY PYDANTIC MODELS ----
 
 class HealthResponse(BaseModel):
@@ -60,6 +57,9 @@ class TaskInfo(BaseModel):
     difficulty: str
     description: str
     reward_focus: str
+    grader: str
+    score_min: float
+    score_max: float
 
 
 class ResetRequest(BaseModel):
