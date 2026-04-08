@@ -52,8 +52,7 @@ class TaskInfo(BaseModel):
     title: str
     difficulty: str
     description: str
-    reward_focus: str
-    grader: str
+    grader_endpoint: str
     score_min: float
     score_max: float
 
