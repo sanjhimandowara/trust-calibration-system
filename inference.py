@@ -4,18 +4,23 @@ import re
 import requests
 from openai import OpenAI
 
+# --- Required environment variables (DO NOT CHANGE) ---
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:7860")
-MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
-
-HF_TOKEN = os.getenv("HF_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-API_KEY = OPENAI_API_KEY or HF_TOKEN
+API_KEY = os.getenv("API_KEY")
 
 if not API_KEY:
-    raise EnvironmentError("Either OPENAI_API_KEY or HF_TOKEN is required.")
+    raise EnvironmentError("API_KEY not found in environment variables")
+
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+
+# --- Initialize LLM client via proxy (MANDATORY) ---
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=API_KEY
+)
 
 
+# --- Helpers ---
 def jbool(value: bool) -> str:
     return "true" if value else "false"
 
@@ -32,15 +37,8 @@ def parse_action(text: str) -> int:
         return 0
 
 
+# --- LLM decision ---
 def choose_action_with_llm(observation: list[float]) -> int:
-    if OPENAI_API_KEY:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-    else:
-        client = OpenAI(
-            api_key=HF_TOKEN,
-            base_url="https://router.huggingface.co/v1",
-        )
-
     prompt = (
         "You are choosing exactly one action for a trust calibration RL environment. "
         "Valid actions are integers 0 to 5 only. "
@@ -54,7 +52,7 @@ def choose_action_with_llm(observation: list[float]) -> int:
         messages=[
             {
                 "role": "system",
-                "content": "Return ONLY JSON. No explanation. Format: {\"action\": integer between 0 and 5}.",
+                "content": "Return ONLY JSON. Format: {\"action\": integer between 0 and 5}.",
             },
             {
                 "role": "user",
@@ -68,8 +66,10 @@ def choose_action_with_llm(observation: list[float]) -> int:
     return parse_action(text)
 
 
+# --- Main loop ---
 def main() -> None:
     print("[START]")
+
     try:
         reset_resp = requests.post(
             f"{API_BASE_URL}/reset",
@@ -77,8 +77,7 @@ def main() -> None:
             timeout=30,
         )
         reset_resp.raise_for_status()
-        reset_payload = reset_resp.json()
-        observation = reset_payload["observation"]
+        observation = reset_resp.json()["observation"]
 
         done = False
         step_idx = 0
@@ -111,6 +110,7 @@ def main() -> None:
 
     except Exception:
         print("[STEP] action=0 reward=0.00 done=true success=false")
+
     finally:
         print("[END]")
 
