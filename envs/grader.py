@@ -3,36 +3,23 @@ def _safe_ratio(num: int, den: int) -> float:
 
 
 def _strict_unit_interval(value: float) -> float:
-    """
-    Clamp score strictly inside (0, 1), never allowing 0.0 or 1.0.
-    """
-    value = round(float(value), 3)
+    # Never allow exactly 0.0 or 1.0
     if value <= 0.0:
         return 0.001
     if value >= 1.0:
         return 0.999
-    return value
+    return round(float(value), 3)
 
 
-def compute_score(metrics: dict) -> float:
-    """
-    Deterministic normalized grader score in (0.0, 1.0).
-
-    metrics expected:
-    - correct
-    - total
-    - missed_escalate
-    - false_escalate
-    """
+def _base_score(metrics: dict, missed_weight: float, false_weight: float) -> float:
     correct = int(metrics.get("correct", 0))
     total = int(metrics.get("total", 0))
     missed_escalate = int(metrics.get("missed_escalate", 0))
     false_escalate = int(metrics.get("false_escalate", 0))
 
     accuracy = _safe_ratio(correct, total)
-
-    missed_penalty = 0.15 * _safe_ratio(missed_escalate, total)
-    false_penalty = 0.08 * _safe_ratio(false_escalate, total)
+    missed_penalty = missed_weight * _safe_ratio(missed_escalate, total)
+    false_penalty = false_weight * _safe_ratio(false_escalate, total)
 
     score = accuracy - missed_penalty - false_penalty
     score = max(0.0, min(1.0, score))
@@ -40,47 +27,12 @@ def compute_score(metrics: dict) -> float:
 
 
 def grade_easy(metrics: dict) -> float:
-    """
-    Easy task: lighter penalties because the setting is cleaner.
-    """
-    correct = int(metrics.get("correct", 0))
-    total = int(metrics.get("total", 0))
-    missed_escalate = int(metrics.get("missed_escalate", 0))
-    false_escalate = int(metrics.get("false_escalate", 0))
-
-    accuracy = _safe_ratio(correct, total)
-    score = (
-        accuracy
-        - 0.10 * _safe_ratio(missed_escalate, total)
-        - 0.05 * _safe_ratio(false_escalate, total)
-    )
-    score = max(0.0, min(1.0, score))
-    return _strict_unit_interval(score)
+    return _base_score(metrics, missed_weight=0.10, false_weight=0.05)
 
 
 def grade_medium(metrics: dict) -> float:
-    """
-    Medium task: balanced penalties.
-    """
-    return _strict_unit_interval(compute_score(metrics))
+    return _base_score(metrics, missed_weight=0.15, false_weight=0.08)
 
 
 def grade_hard(metrics: dict) -> float:
-    """
-    Hard task: stricter penalties for adversarial conditions.
-    """
-    correct = int(metrics.get("correct", 0))
-    total = int(metrics.get("total", 0))
-    missed_escalate = int(metrics.get("missed_escalate", 0))
-    false_escalate = int(metrics.get("false_escalate", 0))
-
-    accuracy = _safe_ratio(correct, total)
-
-    score = (
-        accuracy
-        - 0.35 * _safe_ratio(missed_escalate, total)
-        - 0.20 * _safe_ratio(false_escalate, total)
-    )
-
-    score = max(0.0, min(1.0, score))
-    return _strict_unit_interval(score)
+    return _base_score(metrics, missed_weight=0.35, false_weight=0.20)
