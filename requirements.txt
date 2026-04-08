@@ -1,0 +1,9 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.8.2
+numpy==1.26.4
+gymnasium==0.29.1
+matplotlib==3.9.2
+torch==2.2.2
+openai==1.51.2
+requests==2.32.3

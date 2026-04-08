@@ -1,0 +1,152 @@
+{
+  "baseline": {
+    "easy": {
+      "episodes": 10,
+      "avg_reward": 17.38,
+      "runs": [
+        17.3,
+        17.0,
+        17.2,
+        17.5,
+        17.6,
+        17.1,
+        17.7,
+        17.1,
+        17.6,
+        17.7
+      ],
+      "metrics": {
+        "correct": 200,
+        "total": 200,
+        "missed_escalate": 0,
+        "false_escalate": 0
+      },
+      "score": 1.0
+    },
+    "medium": {
+      "episodes": 10,
+      "avg_reward": 16.95,
+      "runs": [
+        17.9,
+        17.3,
+        17.3,
+        17.2,
+        15.95,
+        17.1,
+        17.3,
+        15.45,
+        15.95,
+        18.0
+      ],
+      "metrics": {
+        "correct": 197,
+        "total": 200,
+        "missed_escalate": 0,
+        "false_escalate": 0
+      },
+      "score": 0.985
+    },
+    "hard": {
+      "episodes": 10,
+      "avg_reward": 15.12,
+      "runs": [
+        17.3,
+        14.63,
+        16.32,
+        11.31,
+        15.62,
+        13.5,
+        15.62,
+        14.76,
+        16.04,
+        16.07
+      ],
+      "metrics": {
+        "correct": 184,
+        "total": 200,
+        "missed_escalate": 2,
+        "false_escalate": 5
+      },
+      "score": 0.912
+    },
+    "overall": {
+      "avg_reward": 16.48,
+      "avg_score": 0.966
+    }
+  },
+  "ppo": {
+    "easy": {
+      "episodes": 10,
+      "avg_reward": 17.55,
+      "runs": [
+        17.6,
+        17.6,
+        17.4,
+        17.8,
+        17.5,
+        17.8,
+        17.7,
+        17.4,
+        17.4,
+        17.3
+      ],
+      "metrics": {
+        "correct": 200,
+        "total": 200,
+        "missed_escalate": 0,
+        "false_escalate": 0
+      },
+      "score": 1.0
+    },
+    "medium": {
+      "episodes": 10,
+      "avg_reward": 18.19,
+      "runs": [
+        18.1,
+        18.6,
+        18.0,
+        18.6,
+        17.45,
+        18.5,
+        18.9,
+        17.9,
+        18.0,
+        17.9
+      ],
+      "metrics": {
+        "correct": 199,
+        "total": 200,
+        "missed_escalate": 0,
+        "false_escalate": 0
+      },
+      "score": 0.995
+    },
+    "hard": {
+      "episodes": 10,
+      "avg_reward": 16.69,
+      "runs": [
+        17.55,
+        15.83,
+        15.94,
+        16.52,
+        16.87,
+        17.01,
+        17.3,
+        17.23,
+        15.45,
+        17.19
+      ],
+      "metrics": {
+        "correct": 186,
+        "total": 200,
+        "missed_escalate": 3,
+        "false_escalate": 1
+      },
+      "score": 0.924
+    },
+    "overall": {
+      "avg_reward": 17.48,
+      "avg_score": 0.973
+    }
+  }
+}
