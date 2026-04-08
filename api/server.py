@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import FastAPI, Query
+from fastapi.responses import HTMLResponse
 
 from envs.trust_env import TrustCalibrationEnv
 from models.schemas import (
@@ -45,15 +46,46 @@ def _grade_current_task() -> float:
     return grade_hard(TASK_METRICS)
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def root():
-    return {
-        "message": "Trust Calibration API Running",
-        "health": "/health",
-        "tasks": "/tasks",
-        "grader": "/grader",
-        "state": "/state",
-    }
+    return """
+    <html>
+        <head>
+            <title>Trust Calibration API</title>
+            <style>
+                body {
+                    background: #0b1220;
+                    color: #e6f1ff;
+                    font-family: Arial, sans-serif;
+                    padding: 40px;
+                }
+                h1 {
+                    color: #00d4ff;
+                    margin-bottom: 16px;
+                }
+                p {
+                    margin-bottom: 16px;
+                    color: #cfe4ff;
+                }
+                a {
+                    display: block;
+                    margin: 10px 0;
+                    color: #00d4ff;
+                    text-decoration: none;
+                    font-size: 18px;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Trust Calibration API Running</h1>
+            <p>Available endpoints:</p>
+            <a href="/health">/health</a>
+            <a href="/tasks">/tasks</a>
+            <a href="/grader">/grader</a>
+            <a href="/state">/state</a>
+        </body>
+    </html>
+    """
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -66,7 +98,6 @@ def health() -> HealthResponse:
 
 @app.get("/tasks")
 def tasks():
-    # Keep it simple. Validator likely wants explicit task ids.
     return ["easy", "medium", "hard"]
 
 
@@ -124,7 +155,6 @@ def step(req: StepRequest) -> StepResponse:
     obs, reward, terminated, truncated, info = ENV.step(req.action)
     CURRENT_OBS = obs
 
-    # Update task metrics for grader
     TASK_METRICS["total"] += 1
 
     if info.get("correct", False):
@@ -136,7 +166,6 @@ def step(req: StepRequest) -> StepResponse:
     if info.get("decision") == "ESCALATE" and info.get("true_label") != "ESCALATE":
         TASK_METRICS["false_escalate"] += 1
 
-    # Expose current score in step info too
     info["task"] = CURRENT_TASK
     info["score"] = _grade_current_task()
 
