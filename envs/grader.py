@@ -19,7 +19,7 @@ def _score_from_metrics(metrics: dict, missed_weight: float, false_weight: float
     missed_escalate = int(metrics.get("missed_escalate", 0))
     false_escalate = int(metrics.get("false_escalate", 0))
 
-    # If no steps yet, return a valid in-range neutral score.
+    # Important: even before any steps, return a valid in-range score
     if total <= 0:
         return 0.500
 
