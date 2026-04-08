@@ -7,3 +7,4 @@ matplotlib==3.9.2
 torch==2.2.2
 openai==1.51.2
 requests==2.32.3
+openenv-core>=0.2.0
