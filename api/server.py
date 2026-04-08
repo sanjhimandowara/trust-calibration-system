@@ -5,7 +5,6 @@ from fastapi import FastAPI, Query
 from envs.trust_env import TrustCalibrationEnv
 from models.schemas import (
     HealthResponse,
-    TaskInfo,
     ResetRequest,
     ResetResponse,
     StepRequest,
@@ -25,20 +24,24 @@ TASK_METRICS = {
     "total": 0,
     "missed_escalate": 0,
     "false_escalate": 0,
+    "avg_conflict": 0.0,
+    "avg_uncertainty": 0.0,
 }
 
 
-def _reset_metrics():
+def reset_metrics():
     global TASK_METRICS
     TASK_METRICS = {
         "correct": 0,
         "total": 0,
         "missed_escalate": 0,
         "false_escalate": 0,
+        "avg_conflict": 0.0,
+        "avg_uncertainty": 0.0,
     }
 
 
-def _normalize_task_name(task_name: Optional[str]) -> str:
+def normalize_task_name(task_name: Optional[str]) -> str:
     if not task_name:
         return CURRENT_TASK
 
@@ -56,8 +59,9 @@ def _normalize_task_name(task_name: Optional[str]) -> str:
     return mapping.get(task_name, "medium")
 
 
-def _grade_for_task(task_name: str) -> float:
-    task_name = _normalize_task_name(task_name)
+def grade_for_task(task_name: str) -> float:
+    task_name = normalize_task_name(task_name)
+
     if task_name == "easy":
         return grade_easy(TASK_METRICS)
     if task_name == "medium":
@@ -73,37 +77,9 @@ def health() -> HealthResponse:
     )
 
 
-@app.get("/tasks", response_model=list[TaskInfo])
-def tasks() -> list[TaskInfo]:
-    return [
-        TaskInfo(
-            id="task_easy_stable",
-            title="Stable Low-Conflict Trust Calibration",
-            difficulty="easy",
-            description="Stable low-conflict signals with minimal ambiguity.",
-            grader_endpoint="/grader?task=task_easy_stable",
-            score_min=0.001,
-            score_max=0.999,
-        ),
-        TaskInfo(
-            id="task_medium_conflict",
-            title="Mixed Conflict Decision-Making",
-            difficulty="medium",
-            description="Mixed conflict with moderate uncertainty.",
-            grader_endpoint="/grader?task=task_medium_conflict",
-            score_min=0.001,
-            score_max=0.999,
-        ),
-        TaskInfo(
-            id="task_hard_adversarial",
-            title="Adversarial Signal Suppression",
-            difficulty="hard",
-            description="Adversarial unreliable signals requiring suppression.",
-            grader_endpoint="/grader?task=task_hard_adversarial",
-            score_min=0.001,
-            score_max=0.999,
-        ),
-    ]
+@app.get("/tasks")
+def tasks():
+    return ["easy", "medium", "hard"]
 
 
 @app.get("/grader")
@@ -112,14 +88,9 @@ def grader(
     task_id: Optional[str] = Query(default=None),
     id: Optional[str] = Query(default=None),
 ):
-    effective_task = _normalize_task_name(task or task_id or id)
-    score = _grade_for_task(effective_task)
-
-    return {
-        "task": effective_task,
-        "score": score,
-        "metrics": TASK_METRICS,
-    }
+    effective_task = normalize_task_name(task or task_id or id)
+    score = grade_for_task(effective_task)
+    return {"score": score}
 
 
 @app.post("/reset", response_model=ResetResponse)
@@ -127,10 +98,10 @@ def reset(req: Optional[ResetRequest] = None) -> ResetResponse:
     global ENV, CURRENT_OBS, CURRENT_TASK
 
     req = req or ResetRequest()
-    difficulty = _normalize_task_name(getattr(req, "difficulty", "medium"))
+    difficulty = normalize_task_name(getattr(req, "difficulty", "medium"))
 
     CURRENT_TASK = difficulty
-    _reset_metrics()
+    reset_metrics()
 
     ENV = TrustCalibrationEnv(
         difficulty=difficulty,
@@ -138,9 +109,6 @@ def reset(req: Optional[ResetRequest] = None) -> ResetResponse:
     )
 
     CURRENT_OBS, info = ENV.reset(seed=req.seed)
-
-    info["task"] = CURRENT_TASK
-    info["score"] = _grade_for_task(CURRENT_TASK)
 
     return ResetResponse(
         observation=[float(x) for x in CURRENT_OBS.tolist()],
@@ -169,8 +137,18 @@ def step(req: StepRequest) -> StepResponse:
     if info.get("decision") == "ESCALATE" and info.get("true_label") != "ESCALATE":
         TASK_METRICS["false_escalate"] += 1
 
+    current_total = TASK_METRICS["total"]
+
+    TASK_METRICS["avg_conflict"] = (
+        ((current_total - 1) * TASK_METRICS["avg_conflict"]) + float(info.get("conflict", 0.0))
+    ) / current_total
+
+    TASK_METRICS["avg_uncertainty"] = (
+        ((current_total - 1) * TASK_METRICS["avg_uncertainty"]) + float(info.get("uncertainty", 0.0))
+    ) / current_total
+
     info["task"] = CURRENT_TASK
-    info["score"] = _grade_for_task(CURRENT_TASK)
+    info["score"] = grade_for_task(CURRENT_TASK)
 
     return StepResponse(
         observation=[float(x) for x in obs.tolist()],
