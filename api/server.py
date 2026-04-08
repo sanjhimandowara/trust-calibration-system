@@ -35,21 +35,30 @@ def tasks() -> list[TaskInfo]:
             title="Stable Low-Conflict Trust Calibration",
             difficulty="easy",
             description="Mostly aligned signals with low ambiguity and minimal adversarial behavior.",
-            reward_focus="Basic decision accuracy and clean trust fusion."
+            reward_focus="Basic decision accuracy and clean trust fusion.",
+            grader="grade_easy",
+            score_min=0.001,
+            score_max=0.999,
         ),
         TaskInfo(
             id="task_medium_conflict",
             title="Mixed Conflict Decision-Making",
             difficulty="medium",
             description="Moderate conflict, uncertainty, and partial source disagreement.",
-            reward_focus="Balanced investigation decisions under uncertainty."
+            reward_focus="Balanced investigation decisions under uncertainty.",
+            grader="grade_medium",
+            score_min=0.001,
+            score_max=0.999,
         ),
         TaskInfo(
             id="task_hard_adversarial",
             title="Adversarial Signal Suppression",
             difficulty="hard",
             description="The unreliable feed may spoof, lag, or mirror other signals and should be handled safely.",
-            reward_focus="Robust suppression and safe escalation behavior."
+            reward_focus="Robust suppression and safe escalation behavior.",
+            grader="grade_hard",
+            score_min=0.001,
+            score_max=0.999,
         ),
     ]
 
