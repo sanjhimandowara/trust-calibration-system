@@ -15,7 +15,6 @@ def compute_score(metrics: dict, task: str) -> float:
     accuracy = float(metrics.get("correct", 0)) / total
     missed = float(metrics.get("missed_escalate", 0)) / total
     false_escalate = float(metrics.get("false_escalate", 0)) / total
-
     conflict = float(metrics.get("avg_conflict", 0.0))
     uncertainty = float(metrics.get("avg_uncertainty", 0.0))
 
