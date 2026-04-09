@@ -41,6 +41,39 @@ def reset_metrics():
     }
 
 
+def normalize_task_name(task_name: Optional[str]) -> str:
+    if not task_name:
+        return CURRENT_TASK
+
+    task_name = str(task_name).strip().lower()
+
+    mapping = {
+        "easy": "easy",
+        "medium": "medium",
+        "hard": "hard",
+    }
+
+    return mapping.get(task_name, "medium")
+
+
+def grade_for_task(task_name: str) -> float:
+    task_name = normalize_task_name(task_name)
+
+    if task_name == "easy":
+        score = grade_easy(TASK_METRICS)
+    elif task_name == "medium":
+        score = grade_medium(TASK_METRICS)
+    else:
+        score = grade_hard(TASK_METRICS)
+
+    if score <= 0.0:
+        score = 0.01
+    if score >= 1.0:
+        score = 0.99
+
+    return round(float(score), 2)
+
+
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(
@@ -51,18 +84,18 @@ def health() -> HealthResponse:
 
 @app.get("/tasks")
 def tasks():
-    return ["easy", "medium", "hard"]
+    return {
+        "tasks": [
+            {"id": "easy"},
+            {"id": "medium"},
+            {"id": "hard"},
+        ]
+    }
 
 
 @app.get("/grader")
 def grader(task: str = Query(...)):
-    if task == "easy":
-        score = grade_easy(TASK_METRICS)
-    elif task == "medium":
-        score = grade_medium(TASK_METRICS)
-    else:
-        score = grade_hard(TASK_METRICS)
-
+    score = grade_for_task(task)
     return {"score": score}
 
 
@@ -71,10 +104,7 @@ def reset(req: Optional[ResetRequest] = None) -> ResetResponse:
     global ENV, CURRENT_OBS, CURRENT_TASK
 
     req = req or ResetRequest()
-    difficulty = getattr(req, "difficulty", "medium") or "medium"
-
-    if difficulty not in ["easy", "medium", "hard"]:
-        difficulty = "medium"
+    difficulty = normalize_task_name(getattr(req, "difficulty", "medium"))
 
     CURRENT_TASK = difficulty
     reset_metrics()
@@ -126,12 +156,7 @@ def step(req: StepRequest) -> StepResponse:
     ) / current_total
 
     info["task"] = CURRENT_TASK
-    if CURRENT_TASK == "easy":
-        info["score"] = grade_easy(TASK_METRICS)
-    elif CURRENT_TASK == "medium":
-        info["score"] = grade_medium(TASK_METRICS)
-    else:
-        info["score"] = grade_hard(TASK_METRICS)
+    info["score"] = grade_for_task(CURRENT_TASK)
 
     return StepResponse(
         observation=[float(x) for x in obs.tolist()],
