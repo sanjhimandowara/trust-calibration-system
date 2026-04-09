@@ -1,45 +1,46 @@
-name: trust-calibration-openenv
-version: "1.0.5"
-title: Trust Calibration OpenEnv
-description: >
-  RL environment for dynamic trust weighting across noisy and adversarial signals.
+def clamp_score(value: float) -> float:
+    value = round(float(value), 2)
 
-entrypoint:
-  module: api.server
-  app: app
+    if value <= 0.0:
+        return 0.01
+    if value >= 1.0:
+        return 0.99
 
-tasks:
-  - id: easy
-    description: Low conflict signals
-    grader:
-      endpoint: /grader?task=easy
+    return value
 
-  - id: medium
-    description: Moderate conflict signals
-    grader:
-      endpoint: /grader?task=medium
 
-  - id: hard
-    description: Adversarial signals
-    grader:
-      endpoint: /grader?task=hard
+def compute_score(metrics: dict, task: str) -> float:
+    total = max(1, int(metrics.get("total", 0)))
 
-observation_space:
-  type: vector
-  shape: [22]
+    accuracy = float(metrics.get("correct", 0)) / total
+    missed = float(metrics.get("missed_escalate", 0)) / total
+    false_escalate = float(metrics.get("false_escalate", 0)) / total
+    conflict = float(metrics.get("avg_conflict", 0.0))
+    uncertainty = float(metrics.get("avg_uncertainty", 0.0))
 
-action_space:
-  type: discrete
-  n: 6
+    score = (
+        0.70 * accuracy
+        + 0.15 * (1.0 - min(1.0, conflict))
+        + 0.15 * (1.0 - min(1.0, uncertainty))
+        - 0.20 * missed
+        - 0.10 * false_escalate
+    )
 
-reward:
-  type: float
-  range: [-1.0, 1.0]
+    if task == "easy":
+        score += 0.05
+    elif task == "hard":
+        score -= 0.05
 
-api:
-  health: /health
-  tasks: /tasks
-  grader: /grader
-  reset: /reset
-  step: /step
-  state: /state
+    return clamp_score(score)
+
+
+def grade_easy(metrics: dict) -> float:
+    return compute_score(metrics, "easy")
+
+
+def grade_medium(metrics: dict) -> float:
+    return compute_score(metrics, "medium")
+
+
+def grade_hard(metrics: dict) -> float:
+    return compute_score(metrics, "hard")
