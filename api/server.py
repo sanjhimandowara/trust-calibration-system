@@ -43,7 +43,7 @@ def reset_metrics():
 
 def normalize_task_name(task_name: Optional[str]) -> str:
     if not task_name:
-        return CURRENT_TASK
+        return "medium"
 
     task_name = str(task_name).strip().lower()
 
@@ -51,27 +51,32 @@ def normalize_task_name(task_name: Optional[str]) -> str:
         "easy": "easy",
         "medium": "medium",
         "hard": "hard",
+        "task_easy_stable": "easy",
+        "task_medium_conflict": "medium",
+        "task_hard_adversarial": "hard",
     }
 
     return mapping.get(task_name, "medium")
 
 
 def grade_for_task(task_name: str) -> float:
-    task_name = normalize_task_name(task_name)
+    normalized = normalize_task_name(task_name)
 
-    if task_name == "easy":
+    if normalized == "easy":
         score = grade_easy(TASK_METRICS)
-    elif task_name == "medium":
+    elif normalized == "medium":
         score = grade_medium(TASK_METRICS)
     else:
         score = grade_hard(TASK_METRICS)
+
+    score = float(score)
 
     if score <= 0.0:
         score = 0.01
     if score >= 1.0:
         score = 0.99
 
-    return round(float(score), 2)
+    return round(score, 2)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -84,18 +89,21 @@ def health() -> HealthResponse:
 
 @app.get("/tasks")
 def tasks():
-    return {
-        "tasks": [
-            {"id": "easy"},
-            {"id": "medium"},
-            {"id": "hard"},
-        ]
-    }
+    return [
+        {"id": "easy", "grader": "/grader?task=easy"},
+        {"id": "medium", "grader": "/grader?task=medium"},
+        {"id": "hard", "grader": "/grader?task=hard"},
+    ]
 
 
 @app.get("/grader")
-def grader(task: str = Query(...)):
-    score = grade_for_task(task)
+def grader(
+    task: Optional[str] = Query(None),
+    task_id: Optional[str] = Query(None),
+    id: Optional[str] = Query(None),
+):
+    task_name = task or task_id or id or "medium"
+    score = grade_for_task(task_name)
     return {"score": score}
 
 
