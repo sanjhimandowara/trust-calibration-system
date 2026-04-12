@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
 from envs.trust_env import TrustCalibrationEnv
 from models.schemas import (
@@ -75,6 +76,42 @@ def update_metrics(info: dict):
         ((current_total - 1) * TASK_METRICS["avg_uncertainty"])
         + float(info.get("uncertainty", 0.0))
     ) / current_total
+
+
+@app.get("/", response_class=HTMLResponse)
+def root():
+    return """
+    <html>
+        <head>
+            <title>Trust Calibration API</title>
+            <style>
+                body {
+                    background: #0b1220;
+                    color: #e6f1ff;
+                    font-family: Arial, sans-serif;
+                    padding: 40px;
+                }
+                h1 { color: #00d4ff; }
+                a {
+                    display: block;
+                    margin: 10px 0;
+                    color: #00d4ff;
+                    text-decoration: none;
+                    font-size: 18px;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Trust Calibration API Running</h1>
+            <a href="/health">/health</a>
+            <a href="/tasks">/tasks</a>
+            <a href="/grader/easy">/grader/easy</a>
+            <a href="/grader/medium">/grader/medium</a>
+            <a href="/grader/hard">/grader/hard</a>
+            <a href="/state">/state</a>
+        </body>
+    </html>
+    """
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -177,15 +214,25 @@ def step(req: StepRequest) -> StepResponse:
 @app.get("/state", response_model=StateResponse)
 def state() -> StateResponse:
     adversarial_mode = "none"
-    if ENV.last_bundle is not None:
+
+    if getattr(ENV, "last_bundle", None) is not None:
         adversarial_mode = str(ENV.last_bundle.adversarial_mode)
 
+    weights = [0.25, 0.25, 0.25, 0.25]
+    suppressed = [False, False, False, False]
+
+    if getattr(ENV, "state", None) is not None:
+        if getattr(ENV.state, "weights", None) is not None:
+            weights = [float(x) for x in ENV.state.weights.tolist()]
+        if getattr(ENV.state, "suppressed", None) is not None:
+            suppressed = [bool(x) for x in ENV.state.suppressed.tolist()]
+
     return StateResponse(
-        step_count=int(ENV.current_step),
-        max_steps=int(ENV.max_steps),
-        difficulty=str(ENV.difficulty),
-        done=bool(ENV.done),
-        weights=[float(x) for x in ENV.state.weights.tolist()],
-        suppressed=[bool(x) for x in ENV.state.suppressed.tolist()],
-        adversarial_mode=adversarial_mode
+        step_count=int(getattr(ENV, "current_step", 0)),
+        max_steps=int(getattr(ENV, "max_steps", 20)),
+        difficulty=str(getattr(ENV, "difficulty", "medium")),
+        done=bool(getattr(ENV, "done", False)),
+        weights=weights,
+        suppressed=suppressed,
+        adversarial_mode=adversarial_mode,
     )
