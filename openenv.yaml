@@ -1,5 +1,5 @@
 name: trust-calibration-openenv
-version: "1.2.0"
+version: "1.3.0"
 
 entrypoint:
   module: app
@@ -12,6 +12,9 @@ tasks:
     grader:
       type: http
       endpoint: /grader/easy
+      score_range:
+        min: 0.01
+        max: 0.99
 
   - id: medium
     name: Medium Task
@@ -19,6 +22,9 @@ tasks:
     grader:
       type: http
       endpoint: /grader/medium
+      score_range:
+        min: 0.01
+        max: 0.99
 
   - id: hard
     name: Hard Task
@@ -26,9 +32,14 @@ tasks:
     grader:
       type: http
       endpoint: /grader/hard
+      score_range:
+        min: 0.01
+        max: 0.99
 
 api:
   health: /health
+  tasks: /tasks
+  grader: /grader
   reset: /reset
   step: /step
   state: /state
