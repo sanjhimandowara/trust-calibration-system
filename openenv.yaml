@@ -1,25 +1,31 @@
 name: trust-calibration-openenv
-version: "1.1.0"
+version: "1.2.0"
 
 entrypoint:
-  module: api.server
+  module: app
   app: app
 
 tasks:
   - id: easy
     name: Easy Task
-    description: Low conflict, stable signals
-    grader: /grader/easy
+    description: Low conflict environment
+    grader:
+      type: http
+      endpoint: /grader/easy
 
   - id: medium
     name: Medium Task
-    description: Moderate conflict and uncertainty
-    grader: /grader/medium
+    description: Moderate conflict environment
+    grader:
+      type: http
+      endpoint: /grader/medium
 
   - id: hard
     name: Hard Task
-    description: High conflict with adversarial signals
-    grader: /grader/hard
+    description: High conflict adversarial environment
+    grader:
+      type: http
+      endpoint: /grader/hard
 
 api:
   health: /health
