@@ -29,7 +29,6 @@ tasks:
 
 api:
   health: /health
-  tasks: /tasks
   reset: /reset
   step: /step
   state: /state
